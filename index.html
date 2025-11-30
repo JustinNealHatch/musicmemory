@@ -64,8 +64,8 @@
 
     #board {
       display: grid;
-      grid-template-columns: repeat(6, minmax(0, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 14px;
       max-width: 900px;
       width: 100%;
     }
@@ -74,7 +74,7 @@
       background: #020617;
       border-radius: 10px;
       border: 1px solid #4b5563;
-      height: 190px;
+      height: 230px;
       cursor: pointer;
       overflow: hidden;
       box-shadow: 0 8px 18px rgba(0,0,0,0.6);
@@ -91,13 +91,13 @@
     .card.match::after {
       content: "✔";
       position: absolute;
-      font-size: 70px;
+      font-size: 80px;
       color: #22c55e;
       font-weight: bold;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      text-shadow: 0 0 12px rgba(34,197,94,0.7);
+      text-shadow: 0 0 16px rgba(34,197,94,0.7);
       z-index: 10;
     }
     .card-face {
@@ -106,11 +106,11 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 8px;
+      padding: 10px;
     }
     .card-front {
       background: radial-gradient(circle at 30% 20%, #1f2937, #020617);
-      font-size: 2rem;
+      font-size: 2.2rem;
       font-weight: 600;
       letter-spacing: 2px;
     }
@@ -137,19 +137,19 @@
       background: radial-gradient(circle at 20% 10%, #111827, #020617);
     }
     .note-letter {
-      font-size: 2.6rem;
+      font-size: 2.8rem;
       font-weight: 700;
-      margin-bottom: 8px;
+      margin-bottom: 4px;
     }
     .note-clef {
       font-size: 0.9rem;
-      opacity: 0.75;
+      opacity: 0.8;
     }
 
     /* VexFlow staff container */
     .vf-staff {
       width: 100%;
-      height: 170px;
+      height: 200px;
       background: #020617;
       border-radius: 8px;
       border: 1px solid #1f2937;
@@ -183,6 +183,7 @@
     const VF = Vex.Flow;
 
     const notes = [
+      // Treble clef
       { id:"treble_C4", clef:"treble", letter:"C", key:"c/4" },
       { id:"treble_D4", clef:"treble", letter:"D", key:"d/4" },
       { id:"treble_E4", clef:"treble", letter:"E", key:"e/4" },
@@ -196,6 +197,7 @@
       { id:"treble_F5", clef:"treble", letter:"F", key:"f/5" },
       { id:"treble_G5", clef:"treble", letter:"G", key:"g/5" },
 
+      // Bass clef
       { id:"bass_E2", clef:"bass", letter:"E", key:"e/2" },
       { id:"bass_F2", clef:"bass", letter:"F", key:"f/2" },
       { id:"bass_G2", clef:"bass", letter:"G", key:"g/2" },
@@ -210,29 +212,43 @@
       { id:"bass_B3", clef:"bass", letter:"B", key:"b/3" }
     ];
 
-    const boardEl     = document.getElementById("board");
-    const movesEl     = document.getElementById("moves");
-    const matchesEl   = document.getElementById("matches");
-    const matchesMaxEl= document.getElementById("matchesMax");
-    const trebleBtn   = document.getElementById("trebleBtn");
-    const bassBtn     = document.getElementById("bassBtn");
-    const bothBtn     = document.getElementById("bothBtn");
+    const boardEl      = document.getElementById("board");
+    const movesEl      = document.getElementById("moves");
+    const matchesEl    = document.getElementById("matches");
+    const matchesMaxEl = document.getElementById("matchesMax");
+    const trebleBtn    = document.getElementById("trebleBtn");
+    const bassBtn      = document.getElementById("bassBtn");
+    const bothBtn      = document.getElementById("bothBtn");
 
     let deck    = [];
     let first   = null;
     let lock    = false;
     let moves   = 0;
     let matches = 0;
-    let clefMode = "both"; // "treble", "bass", "both"
+    let clefMode = "both";   // "treble", "bass", "both"
 
+    // Build deck, with pairId = clef + letter (octave ignored)
     function buildDeck() {
       const arr = [];
       notes.forEach(n => {
         if (clefMode === "treble" && n.clef !== "treble") return;
         if (clefMode === "bass"   && n.clef !== "bass")   return;
 
-        arr.push({ kind:"note", pairId:n.id, clef:n.clef, letter:n.letter, key:n.key });
-        arr.push({ kind:"name", pairId:n.id, clef:n.clef, letter:n.letter });
+        const pairId = `${n.clef}_${n.letter}`;
+
+        arr.push({
+          kind: "note",
+          pairId,
+          clef: n.clef,
+          letter: n.letter,
+          key: n.key
+        });
+        arr.push({
+          kind: "name",
+          pairId,
+          clef: n.clef,
+          letter: n.letter
+        });
       });
       return shuffle(arr);
     }
@@ -286,15 +302,15 @@
         if (!div) return;
 
         const renderer = new VF.Renderer(div, VF.Renderer.Backends.SVG);
-        renderer.resize(180, 170);
+        renderer.resize(220, 210);
         const ctx = renderer.getContext();
 
-        // white notation on dark background
+        // High contrast: white notation on dark background
         ctx.setFillStyle("#ffffff");
         ctx.setStrokeStyle("#ffffff");
-        ctx.setFont("16px Arial", 16);
+        ctx.setFont("18px Arial", 18);
 
-        const stave = new VF.Stave(10, 40, 160);
+        const stave = new VF.Stave(15, 60, 190);
         stave.addClef(card.clef);
         stave.setContext(ctx).draw();
 
@@ -307,7 +323,7 @@
         const voice = new VF.Voice({ num_beats: 1, beat_value: 4 });
         voice.addTickable(note);
 
-        new VF.Formatter().joinVoices([voice]).format([voice], 100);
+        new VF.Formatter().joinVoices([voice]).format([voice], 120);
         voice.draw(ctx, stave);
       });
     }
@@ -371,13 +387,9 @@
       bassBtn.classList.remove("active");
       bothBtn.classList.remove("active");
 
-      if (clefMode === "treble") {
-        trebleBtn.classList.add("active");
-      } else if (clefMode === "bass") {
-        bassBtn.classList.add("active");
-      } else {
-        bothBtn.classList.add("active");
-      }
+      if (clefMode === "treble") trebleBtn.classList.add("active");
+      else if (clefMode === "bass") bassBtn.classList.add("active");
+      else bothBtn.classList.add("active");
     }
 
     // Button listeners
