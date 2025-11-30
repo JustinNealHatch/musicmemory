@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>Clef Memory Game</title>
 
-  <!-- VexFlow 3 browser build (gives global Vex.Flow) -->
+  <!-- VexFlow browser build -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vexflow/3.0.9/vexflow-min.js"></script>
 
   <style>
@@ -19,6 +19,7 @@
       flex-direction: column;
       align-items: center;
       min-height: 100vh;
+      text-align: center;
     }
     h1 {
       margin: 0 0 8px 0;
@@ -46,9 +47,9 @@
     }
     #board {
       display: grid;
-      grid-template-columns: repeat(8, minmax(0, 1fr));
-      gap: 10px;
-      max-width: 960px;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 12px;
+      max-width: 900px;
       width: 100%;
     }
     .card {
@@ -56,7 +57,7 @@
       background: #020617;
       border-radius: 10px;
       border: 1px solid #4b5563;
-      height: 150px;
+      height: 190px;
       cursor: pointer;
       overflow: hidden;
       box-shadow: 0 8px 18px rgba(0,0,0,0.6);
@@ -65,12 +66,12 @@
     .card:active {
       transform: scale(0.97);
     }
-    .card.matched {
+    .card.match {
       cursor: default;
       pointer-events: none;
       position: relative;
     }
-    .card.matched::after {
+    .card.match::after {
       content: "✔";
       position: absolute;
       font-size: 70px;
@@ -88,7 +89,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 6px;
+      padding: 8px;
     }
     .card-front {
       background: radial-gradient(circle at 30% 20%, #1f2937, #020617);
@@ -107,6 +108,8 @@
     .card.flipped .card-back {
       display: flex;
     }
+
+    /* Name cards */
     .name-card {
       display: flex;
       flex-direction: column;
@@ -117,17 +120,23 @@
       background: radial-gradient(circle at 20% 10%, #111827, #020617);
     }
     .note-letter {
-      font-size: 2.4rem;
+      font-size: 2.6rem;
       font-weight: 700;
       margin-bottom: 8px;
     }
     .note-clef {
-      font-size: 0.8rem;
-      opacity: 0.7;
+      font-size: 0.9rem;
+      opacity: 0.75;
     }
+
+    /* VexFlow staff container */
     .vf-staff {
       width: 100%;
-      height: 140px;
+      height: 170px;
+      background: #020617;
+      border-radius: 8px;
+      border: 1px solid #1f2937;
+      overflow: hidden;
     }
     .vf-staff svg, .vf-staff canvas {
       width: 100%;
@@ -147,54 +156,51 @@
   <div id="board"></div>
 
   <script>
-    // Alias Vex.Flow to VF for convenience
     const VF = Vex.Flow;
 
-    // 12 notes per clef with real note names for VexFlow (letter/octave)
     const notes = [
-      { id: "treble_C4", clef: "treble", letter: "C", key: "c/4" },
-      { id: "treble_D4", clef: "treble", letter: "D", key: "d/4" },
-      { id: "treble_E4", clef: "treble", letter: "E", key: "e/4" },
-      { id: "treble_F4", clef: "treble", letter: "F", key: "f/4" },
-      { id: "treble_G4", clef: "treble", letter: "G", key: "g/4" },
-      { id: "treble_A4", clef: "treble", letter: "A", key: "a/4" },
-      { id: "treble_B4", clef: "treble", letter: "B", key: "b/4" },
-      { id: "treble_C5", clef: "treble", letter: "C", key: "c/5" },
-      { id: "treble_D5", clef: "treble", letter: "D", key: "d/5" },
-      { id: "treble_E5", clef: "treble", letter: "E", key: "e/5" },
-      { id: "treble_F5", clef: "treble", letter: "F", key: "f/5" },
-      { id: "treble_G5", clef: "treble", letter: "G", key: "g/5" },
+      { id:"treble_C4", clef:"treble", letter:"C", key:"c/4" },
+      { id:"treble_D4", clef:"treble", letter:"D", key:"d/4" },
+      { id:"treble_E4", clef:"treble", letter:"E", key:"e/4" },
+      { id:"treble_F4", clef:"treble", letter:"F", key:"f/4" },
+      { id:"treble_G4", clef:"treble", letter:"G", key:"g/4" },
+      { id:"treble_A4", clef:"treble", letter:"A", key:"a/4" },
+      { id:"treble_B4", clef:"treble", letter:"B", key:"b/4" },
+      { id:"treble_C5", clef:"treble", letter:"C", key:"c/5" },
+      { id:"treble_D5", clef:"treble", letter:"D", key:"d/5" },
+      { id:"treble_E5", clef:"treble", letter:"E", key:"e/5" },
+      { id:"treble_F5", clef:"treble", letter:"F", key:"f/5" },
+      { id:"treble_G5", clef:"treble", letter:"G", key:"g/5" },
 
-      { id: "bass_E2", clef: "bass", letter: "E", key: "e/2" },
-      { id: "bass_F2", clef: "bass", letter: "F", key: "f/2" },
-      { id: "bass_G2", clef: "bass", letter: "G", key: "g/2" },
-      { id: "bass_A2", clef: "bass", letter: "A", key: "a/2" },
-      { id: "bass_B2", clef: "bass", letter: "B", key: "b/2" },
-      { id: "bass_C3", clef: "bass", letter: "C", key: "c/3" },
-      { id: "bass_D3", clef: "bass", letter: "D", key: "d/3" },
-      { id: "bass_E3", clef: "bass", letter: "E", key: "e/3" },
-      { id: "bass_F3", clef: "bass", letter: "F", key: "f/3" },
-      { id: "bass_G3", clef: "bass", letter: "G", key: "g/3" },
-      { id: "bass_A3", clef: "bass", letter: "A", key: "a/3" },
-      { id: "bass_B3", clef: "bass", letter: "B", key: "b/3" }
+      { id:"bass_E2", clef:"bass", letter:"E", key:"e/2" },
+      { id:"bass_F2", clef:"bass", letter:"F", key:"f/2" },
+      { id:"bass_G2", clef:"bass", letter:"G", key:"g/2" },
+      { id:"bass_A2", clef:"bass", letter:"A", key:"a/2" },
+      { id:"bass_B2", clef:"bass", letter:"B", key:"b/2" },
+      { id:"bass_C3", clef:"bass", letter:"C", key:"c/3" },
+      { id:"bass_D3", clef:"bass", letter:"D", key:"d/3" },
+      { id:"bass_E3", clef:"bass", letter:"E", key:"e/3" },
+      { id:"bass_F3", clef:"bass", letter:"F", key:"f/3" },
+      { id:"bass_G3", clef:"bass", letter:"G", key:"g/3" },
+      { id:"bass_A3", clef:"bass", letter:"A", key:"a/3" },
+      { id:"bass_B3", clef:"bass", letter:"B", key:"b/3" }
     ];
 
-    const boardEl = document.getElementById("board");
-    const movesEl = document.getElementById("moves");
+    const boardEl   = document.getElementById("board");
+    const movesEl   = document.getElementById("moves");
     const matchesEl = document.getElementById("matches");
 
-    let deck = [];
-    let first = null;
-    let second = null;
-    let lock = false;
-    let moves = 0;
+    let deck    = [];
+    let first   = null;
+    let lock    = false;
+    let moves   = 0;
     let matches = 0;
 
     function buildDeck() {
       const arr = [];
       notes.forEach(n => {
-        arr.push({ kind: "note", pairId: n.id, clef: n.clef, letter: n.letter, key: n.key });
-        arr.push({ kind: "name", pairId: n.id, clef: n.clef, letter: n.letter });
+        arr.push({ kind:"note", pairId:n.id, clef:n.clef, letter:n.letter, key:n.key });
+        arr.push({ kind:"name", pairId:n.id, clef:n.clef, letter:n.letter });
       });
       return shuffle(arr);
     }
@@ -202,56 +208,63 @@
     function shuffle(a) {
       const arr = a.slice();
       for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
+        const j = Math.floor(Math.random() * (i+1));
         [arr[i], arr[j]] = [arr[j], arr[i]];
       }
       return arr;
     }
 
     function createCard(card, index) {
-      const el = document.createElement("div");
-      el.className = "card";
-      el.dataset.index = index;
+      const div = document.createElement("div");
+      div.className = "card";
+      div.dataset.index = index;
 
-      let backHtml = "";
+      let backContent = "";
       if (card.kind === "note") {
-        backHtml = `<div class="vf-staff" id="vf-${index}"></div>`;
+        backContent = `<div class="vf-staff" id="vf-${index}"></div>`;
       } else {
         const clefText = card.clef === "treble" ? "Treble clef" : "Bass clef";
-        backHtml = `
+        backContent = `
           <div class="name-card">
             <div class="note-letter">${card.letter}</div>
             <div class="note-clef">${clefText}</div>
           </div>`;
       }
 
-      el.innerHTML = `
+      div.innerHTML = `
         <div class="card-face card-front">?</div>
-        <div class="card-face card-back">${backHtml}</div>
+        <div class="card-face card-back">${backContent}</div>
       `;
-      el.addEventListener("click", onFlip);
-      return el;
+
+      div.addEventListener("click", () => flip(div));
+      return div;
     }
 
     function renderBoard() {
       boardEl.innerHTML = "";
       deck.forEach((card, i) => boardEl.appendChild(createCard(card, i)));
-      renderNoteCards();
+      renderStaffs();
     }
 
-    function renderNoteCards() {
-      deck.forEach((card, index) => {
+    function renderStaffs() {
+      deck.forEach((card, i) => {
         if (card.kind !== "note") return;
-        const containerId = `vf-${index}`;
-        const container = document.getElementById(containerId);
-        if (!container) return;
+        const id  = `vf-${i}`;
+        const div = document.getElementById(id);
+        if (!div) return;
 
-        const renderer = new VF.Renderer(container, VF.Renderer.Backends.SVG);
-        renderer.resize(140, 140);
-        const context = renderer.getContext();
-        const stave = new VF.Stave(10, 20, 120);
+        const renderer = new VF.Renderer(div, VF.Renderer.Backends.SVG);
+        renderer.resize(180, 170);
+        const ctx = renderer.getContext();
+
+        /* Make notation bright white for contrast */
+        ctx.setFillStyle("#ffffff");
+        ctx.setStrokeStyle("#ffffff");
+        ctx.setFont("16px Arial", 16);
+
+        const stave = new VF.Stave(10, 40, 160);
         stave.addClef(card.clef);
-        stave.setContext(context).draw();
+        stave.setContext(ctx).draw();
 
         const note = new VF.StaveNote({
           clef: card.clef,
@@ -262,18 +275,18 @@
         const voice = new VF.Voice({ num_beats: 1, beat_value: 4 });
         voice.addTickable(note);
 
-        new VF.Formatter().joinVoices([voice]).format([voice], 80);
-        voice.draw(context, stave);
+        new VF.Formatter().joinVoices([voice]).format([voice], 100);
+        voice.draw(ctx, stave);
       });
     }
 
-    function onFlip(e) {
+    function flip(el) {
       if (lock) return;
 
-      const el = e.currentTarget;
-      const card = deck[el.dataset.index];
+      const index = Number(el.dataset.index);
+      const card  = deck[index];
 
-      if (el.classList.contains("flipped") || el.classList.contains("matched")) return;
+      if (el.classList.contains("flipped") || el.classList.contains("match")) return;
 
       el.classList.add("flipped");
 
@@ -282,34 +295,30 @@
         return;
       }
 
-      second = { el, card };
+      const second = { el, card };
       lock = true;
       moves++;
       movesEl.textContent = moves;
 
-      const match =
+      const isMatch =
         first.card.pairId === second.card.pairId &&
         first.card.kind !== second.card.kind;
 
-      if (match) {
-        first.el.classList.add("matched");
-        second.el.classList.add("matched");
+      if (isMatch) {
+        first.el.classList.add("match");
+        second.el.classList.add("match");
         matches++;
         matchesEl.textContent = matches;
-        resetTurn();
+        first = null;
+        lock = false;
       } else {
         setTimeout(() => {
           first.el.classList.remove("flipped");
           second.el.classList.remove("flipped");
-          resetTurn();
+          first = null;
+          lock = false;
         }, 900);
       }
-    }
-
-    function resetTurn() {
-      first = null;
-      second = null;
-      lock = false;
     }
 
     function restart() {
@@ -319,7 +328,6 @@
       movesEl.textContent = "0";
       matchesEl.textContent = "0";
       first = null;
-      second = null;
       lock = false;
       renderBoard();
     }
