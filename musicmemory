@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Clef Memory Game</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #020617;
+      color: #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    h1 {
+      margin: 0 0 8px 0;
+      font-size: 1.6rem;
+    }
+    #subtitle {
+      margin: 0 0 16px 0;
+      font-size: 0.95rem;
+      opacity: 0.8;
+      text-align: center;
+    }
+    #hud {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 16px;
+      font-size: 0.95rem;
+    }
+    #hud button {
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid #4b5563;
+      background: #111827;
+      color: #e5e7eb;
+      cursor: pointer;
+    }
+    #hud button:hover {
+      background: #1f2937;
+    }
+    #board {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+      gap: 10px;
+      max-width: 960px;
+      width: 100%;
+    }
+    .card {
+      position: relative;
+      background: #020617;
+      border-radius: 10px;
+      border: 1px solid #4b5563;
+      height: 150px;
+      cursor: pointer;
+      overflow: hidden;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.6);
+      transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.2s ease;
+    }
+    .card:active {
+      transform: scale(0.97);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.7);
+    }
+    .card.matched {
+      opacity: 0.35;
+      cursor: default;
+      box-shadow: none;
+    }
+    .card-face {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+    }
+    .card-front {
+      background: radial-gradient(circle at 30% 20%, #1f2937, #020617);
+      font-size: 2rem;
+      font-weight: 600;
+      letter-spacing: 2px;
+    }
+    .card-back {
+      display: none;
+      background: #020617;
+    }
+    .card.flipped .card-front {
+      display: none;
+    }
+    .card.flipped .card-back {
+      display: flex;
+    }
+    /* Name cards */
+    .name-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 20% 10%, #111827, #020617);
+    }
+    .note-letter {
+      font-size: 2.4rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .note-clef {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      opacity: 0.8;
+    }
+    /* Staff note cards */
+    .mini-staff {
+      position: relative;
+      width: 100%;
+      height: 140px;
+      background: #020617;
+      border-radius: 8px;
+      border: 1px solid #374151;
+    }
+    .staff-line {
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      height: 2px;
+      background: #e5e7eb;
+      opacity: 0.9;
+    }
+    .clef-symbol {
+      position: absolute;
+      left: 14px;
+      top: 52px;
+      font-size: 1.7rem;
+      opacity: 0.9;
+    }
+    .note-head {
+      position: absolute;
+      left: 60%;
+      width: 22px;
+      height: 16px;
+      border-radius: 50%;
+      background: #fbbf24;
+      border: 2px solid #f59e0b;
+      transform: translate(-50%, -50%) rotate(-20deg);
+      box-shadow: 0 0 10px rgba(250, 204, 21, 0.7);
+    }
+    #message {
+      margin-top: 12px;
+      font-size: 0.95rem;
+      min-height: 1.1em;
+    }
+    #message.win {
+      color: #22c55e;
+    }
+  </style>
+</head>
+<body>
+  <h1>Clef Memory</h1>
+  <p id="subtitle">
+    Match each staff note (treble or bass) with its name card, 12 notes per clef, 48 cards total.
+  </p>
+
+  <div id="hud">
+    <div>Moves: <span id="moves">0</span></div>
+    <div>Matches: <span id="matches">0</span> / 24</div>
+    <button id="restartBtn">Restart</button>
+  </div>
+
+  <div id="board"></div>
+  <div id="message"></div>
+
+  <script>
+    // 12 notes for each clef (you can change these easily)
+    // Y positions are in pixels inside the mini-staff (0–140),
+    // aligned so 5 staff lines sit at y = 100, 80, 60, 40, 20.
+    const notes = [
+      // Treble clef (G clef), from C4 (two ledger lines below) up to G5 (above top line)
+      { id: "treble_C4", clef: "treble", pitch: "C4", letter: "C", y: 120 },
+      { id: "treble_D4", clef: "treble", pitch: "D4", letter: "D", y: 110 },
+      { id: "treble_E4", clef: "treble", pitch: "E4", letter: "E", y: 100 },
+      { id: "treble_F4", clef: "treble", pitch: "F4", letter: "F", y: 90  },
+      { id: "treble_G4", clef: "treble", pitch: "G4", letter: "G", y: 80  },
+      { id: "treble_A4", clef: "treble", pitch: "A4", letter: "A", y: 70  },
+      { id: "treble_B4", clef: "treble", pitch: "B4", letter: "B", y: 60  },
+      { id: "treble_C5", clef: "treble", pitch: "C5", letter: "C", y: 50  },
+      { id: "treble_D5", clef: "treble", pitch: "D5", letter: "D", y: 40  },
+      { id: "treble_E5", clef: "treble", pitch: "E5", letter: "E", y: 30  },
+      { id: "treble_F5", clef: "treble", pitch: "F5", letter: "F", y: 20  },
+      { id: "treble_G5", clef: "treble", pitch: "G5", letter: "G", y: 10  },
+
+      // Bass clef (F clef), from E2 (two ledger lines below) up to B3 (above top line)
+      { id: "bass_E2", clef: "bass", pitch: "E2", letter: "E", y: 120 },
+      { id: "bass_F2", clef: "bass", pitch: "F2", letter: "F", y: 110 },
+      { id: "bass_G2", clef: "bass", pitch: "G2", letter: "G", y: 100 },
+      { id: "bass_A2", clef: "bass", pitch: "A2", letter: "A", y: 90  },
+      { id: "bass_B2", clef: "bass", pitch: "B2", letter: "B", y: 80  },
+      { id: "bass_C3", clef: "bass", pitch: "C3", letter: "C", y: 70  },
+      { id: "bass_D3", clef: "bass", pitch: "D3", letter: "D", y: 60  },
+      { id: "bass_E3", clef: "bass", pitch: "E3", letter: "E", y: 50  },
+      { id: "bass_F3", clef: "bass", pitch: "F3", letter: "F", y: 40  },
+      { id: "bass_G3", clef: "bass", pitch: "G3", letter: "G", y: 30  },
+      { id: "bass_A3", clef: "bass", pitch: "A3", letter: "A", y: 20  },
+      { id: "bass_B3", clef: "bass", pitch: "B3", letter: "B", y: 10  }
+    ];
+
+    const boardEl = document.getElementById("board");
+    const movesEl = document.getElementById("moves");
+    const matchesEl = document.getElementById("matches");
+    const restartBtn = document.getElementById("restartBtn");
+    const messageEl = document.getElementById("message");
+
+    let deck = [];
+    let firstCard = null;
+    let secondCard = null;
+    let lockBoard = false;
+    let moves = 0;
+    let matches = 0;
+
+    function buildDeck() {
+      const newDeck = [];
+      notes.forEach(note => {
+        // Staff note card
+        newDeck.push({
+          kind: "note",
+          pairId: note.id,
+          clef: note.clef,
+          pitch: note.pitch,
+          letter: note.letter,
+          y: note.y
+        });
+        // Name card
+        newDeck.push({
+          kind: "name",
+          pairId: note.id,
+          clef: note.clef,
+          pitch: note.pitch,
+          letter: note.letter
+        });
+      });
+      return shuffle(newDeck);
+    }
+
+    function shuffle(arr) {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function createCardElement(card, index) {
+      const cardEl = document.createElement("div");
+      cardEl.className = "card";
+      cardEl.dataset.index = index.toString();
+
+      let backInner = "";
+
+      if (card.kind === "note") {
+        const clefSymbol = card.clef === "treble" ? "𝄞" : "𝄢";
+        backInner = `
+          <div class="mini-staff">
+            <div class="staff-line" style="top: 100px;"></div>
+            <div class="staff-line" style="top: 80px;"></div>
+            <div class="staff-line" style="top: 60px;"></div>
+            <div class="staff-line" style="top: 40px;"></div>
+            <div class="staff-line" style="top: 20px;"></div>
+            <div class="clef-symbol">${clefSymbol}</div>
+            <div class="note-head" style="top: ${card.y}px;"></div>
+          </div>
+        `;
+      } else {
+        const clefText = card.clef === "treble" ? "Treble clef" : "Bass clef";
+        backInner = `
+          <div class="name-card">
+            <div class="note-letter">${card.letter}</div>
+            <div class="note-clef">${clefText}</div>
+          </div>
+        `;
+      }
+
+      cardEl.innerHTML = `
+        <div class="card-face card-front">?</div>
+        <div class="card-face card-back">
+          ${backInner}
+        </div>
+      `;
+
+      cardEl.addEventListener("click", onCardClick);
+      return cardEl;
+    }
+
+    function renderBoard() {
+      boardEl.innerHTML = "";
+      deck.forEach((card, index) => {
+        const el = createCardElement(card, index);
+        boardEl.appendChild(el);
+      });
+    }
+
+    function resetGame() {
+      deck = buildDeck();
+      firstCard = null;
+      secondCard = null;
+      lockBoard = false;
+      moves = 0;
+      matches = 0;
+      movesEl.textContent = "0";
+      matchesEl.textContent = "0";
+      messageEl.textContent = "";
+      messageEl.className = "";
+      renderBoard();
+    }
+
+    function onCardClick(e) {
+      if (lockBoard) return;
+      const cardEl = e.currentTarget;
+      const index = parseInt(cardEl.dataset.index, 10);
+      const card = deck[index];
+
+      if (cardEl.classList.contains("flipped") || cardEl.classList.contains("matched")) {
+        return;
+      }
+
+      flipCard(cardEl);
+
+      if (!firstCard) {
+        firstCard = { card, element: cardEl };
+      } else if (!secondCard) {
+        secondCard = { card, element: cardEl };
+        checkForMatch();
+      }
+    }
+
+    function flipCard(cardEl) {
+      cardEl.classList.add("flipped");
+    }
+
+    function unflipCard(cardEl) {
+      cardEl.classList.remove("flipped");
+    }
+
+    function checkForMatch() {
+      if (!firstCard || !secondCard) return;
+      lockBoard = true;
+      moves++;
+      movesEl.textContent = moves.toString();
+
+      const isMatch =
+        firstCard.card.pairId === secondCard.card.pairId &&
+        firstCard.card.kind !== secondCard.card.kind; // one note, one name
+
+      if (isMatch) {
+        firstCard.element.classList.add("matched");
+        secondCard.element.classList.add("matched");
+        matches++;
+        matchesEl.textContent = matches.toString();
+        clearSelection();
+        lockBoard = false;
+        if (matches === 24) {
+          messageEl.textContent = "Nice work, you found all the pairs!";
+          messageEl.className = "win";
+        }
+      } else {
+        setTimeout(() => {
+          unflipCard(firstCard.element);
+          unflipCard(secondCard.element);
+          clearSelection();
+          lockBoard = false;
+        }, 800);
+      }
+    }
+
+    function clearSelection() {
+      firstCard = null;
+      secondCard = null;
+    }
+
+    restartBtn.addEventListener("click", resetGame);
+
+    // Start
+    resetGame();
+  </script>
+</body>
+</html>
